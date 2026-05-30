@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{title}}</title>
     <link rel="stylesheet" href="https://unpkg.com/mvp.css">
+    <style>
+        section {
+            display: block;   /* flex 대신 block */
+        }
+        article {
+            margin-bottom: 15px;   /* 카드 사이 간격 */
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -17,8 +25,30 @@
         </form>
     </center>
     <main>
-        {{keyword}}
+        {% if sites %}
+        <center>
+            <h3>{{sites|length}}개 데이터 수집...</h3>
+        </center>
 
+        <section>
+            {% for site in sites %}
+            <article>
+                <h3>
+                    <a href="{{ site.link }}" target="_blank">
+                        {{ site.title }}
+                    </a>
+                </h3>
+                <p>{{ site.description }}</p>
+                <p>{{ site.link }}</p>
+            </article>
+            {% endfor %}
+        </section>
+
+        {% else %}
+        <center>
+            <h3>데이터가 없습니다. 검색어를 입력해주세요.</h3>
+        </center>
+        {% endif %}
     </main>
 
 </body>
