@@ -7,5 +7,6 @@ class SiteModel(Model):
     title: str
     link: str
     description: str
+    is_favorite: bool = False
 
     model_config = {"collection": "sites"}

@@ -5,18 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{title}}</title>
     <link rel="stylesheet" href="https://unpkg.com/mvp.css">
-    <style>
-        section {
-            display: block;   /* flex 대신 block */
-        }
-        article {
-            margin-bottom: 15px;   /* 카드 사이 간격 */
-        }
-    </style>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <header>
         <h1>콜렉터 마크</h1>
+        <nav>
+            <a href="/">검색</a>
+            <a href="/favorites">즐겨찾기</a>
+        </nav>
     </header>
     <center>
         <form id="search_form" action="/search">
@@ -32,14 +29,39 @@
 
         <section>
             {% for site in sites %}
-            <article>
-                <h3>
-                    <a href="{{ site.link }}" target="_blank">
-                        {{ site.title }}
-                    </a>
-                </h3>
-                <p>{{ site.description }}</p>
-                <p>{{ site.link }}</p>
+            <article class="site">
+                <div class="site-row">
+                    <div class="site-header">
+                        <h3>
+                            <a href="{{ site.link }}" target="_blank">
+                                {{ site.title }}
+                            </a>
+                        </h3>
+                        <form action="/favorites" method="post" class="isFav">
+                            <input type="hidden" name="keyword" value="{{site.keyword}}">
+                            <input type="hidden" name="title" value="{{site.title}}">
+                            <input type="hidden" name="link" value="{{site.link}}">
+                            <input type="hidden" name="description" value="{{site.description}}">
+                            <input type="hidden" name="next_url" value="{{next_url}}">
+                            <button
+                                type="submit"
+                                class="heart_button {% if site.is_favorite %}fav{% else %}not-fav{% endif %}"
+                                title="즐겨찾기">
+                                {% if site.is_favorite %}
+                                    ♥
+                                {% else %}
+                                    ♡
+                                {% endif %}
+                            </button>
+                        </form>
+                    </div>
+                    <p class="site-description">{{ site.description }}</p>
+                    <p class="site-link">
+                        <a href="{{ site.link }}" target="_blank">
+                            {{ site.link }}
+                        </a>
+                    </p>
+                </div>
             </article>
             {% endfor %}
         </section>

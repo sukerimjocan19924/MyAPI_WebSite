@@ -1,6 +1,8 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 from pathlib import Path
 
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -22,6 +24,8 @@ app = FastAPI()
 
 
 BASE_DIR = Path(__file__).resolve().parent
+
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 
@@ -42,16 +46,13 @@ async def root(request: Request):
 async def read_item(request: Request, q: str):
     keyword = q
 
-    if not keyword:
-        return templates.TemplateResponse(
-            request=request,
-            name="index.html",
-            context={"message": "검색어를 입력해주세요"},
-        )
     naver_site_scraper = NaverSiteScraper()
 
     sites = await naver_site_scraper.search(keyword, 10)
 
+    favorite_sites = await mongodb.engine.find(SiteModel, SiteModel.is_favorite == True)
+
+    favorite_links = [site.link for site in favorite_sites]
     site_models = []
 
     for site in sites:
@@ -62,11 +63,57 @@ async def read_item(request: Request, q: str):
             link=site["link"],
             description=clean_html(site.get("description", "")),
         )
+
+        if site_model.link in favorite_links:
+            site_model.is_favorite = True
+
         site_models.append(site_model)
 
-    await mongodb.engine.save_all(site_models)
     return templates.TemplateResponse(
-        request=request, name="index.html", context={"keyword": q, "sites": site_models}
+        request=request,
+        name="index.html",
+        context={"keyword": q, "sites": site_models, "next_url": f"/search?q={q}"},
+    )
+
+
+@app.post("/favorites")
+async def toggle_favorite(
+    request: Request,
+    keyword: str = Form(...),
+    link: str = Form(...),
+    title: str = Form(...),
+    description: str = Form(...),
+    next_url: str = Form("/"),
+):
+    favorite_site = await mongodb.engine.find_one(
+        SiteModel,
+        (SiteModel.keyword == keyword)
+        & (SiteModel.link == link)
+        & (SiteModel.is_favorite == True),
+    )
+    if favorite_site:
+        await mongodb.engine.delete(favorite_site)
+    else:
+        site = SiteModel(
+            keyword=keyword,
+            link=link,
+            title=title,
+            description=description,
+            is_favorite=True,
+        )
+        await mongodb.engine.save(site)
+
+    return RedirectResponse(url=next_url, status_code=303)
+
+
+@app.get("/favorites", response_class=HTMLResponse)
+async def favorites(request: Request):
+    sites = await mongodb.engine.find(SiteModel, SiteModel.is_favorite == True)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={"title": "즐겨찾기 목록", "sites": sites, "next_url": "/favorites"},
     )
 
 
